@@ -25,11 +25,6 @@ class HistoryController
     {
         $this->service = $service;
         $this->programService = $programService;
-
-        $this->pageService = new PageElementService();
-        $this->textRepo = new TextRepository();
-        $this->imageRepo = new ImageRepository();
-        $this->buttonService = new ButtonService();
     }
 
     private function requireAdmin(): void
@@ -64,18 +59,30 @@ class HistoryController
 
     public function index(): void
     {
-         $vm = $this->buildPageVM('History');
+        $start = microtime(true);
 
+        $vm = $this->buildPageVM('History');
+        echo "buildPageVM: " . (microtime(true) - $start) . "<br>";
+
+        $step2 = microtime(true);
         $sessions = $this->service->getAllSessions();
+        echo "getAllSessions: " . (microtime(true) - $step2) . "<br>";
+
+        $step3 = microtime(true);
         $venues = $this->service->getAllVenues();
+        echo "getAllVenues: " . (microtime(true) - $step3) . "<br>";
+
+        echo "TOTAL before view: " . (microtime(true) - $start) . "<br><hr>";
 
         require __DIR__ . '/../Views/event/historyEvent/index.php';
     }
     private function buildPageVM(string $pageName): PageElementViewModel
-{
-    $sections = $this->pageService->getPageSections($pageName);
-    return new PageElementViewModel($sections);
-}
+    {
+        $pageService = new PageElementService();
+        $sections = $pageService->getPageSections($pageName);
+
+        return new PageElementViewModel($sections);
+    }
 
     public function booking(): void
     {
@@ -421,17 +428,17 @@ class HistoryController
         exit;
     }
     public function detail($vars): void
-{
-    $venueId = (int)($vars['id'] ?? 0);
+    {
+        $venueId = (int)($vars['id'] ?? 0);
 
-    $venue = $this->service->getVenueById($venueId);
+        $venue = $this->service->getVenueById($venueId);
 
-    if (!$venue) {
-        http_response_code(404);
-        echo "Venue not found";
-        return;
+        if (!$venue) {
+            http_response_code(404);
+            echo "Venue not found";
+            return;
+        }
+
+        require __DIR__ . '/../Views/event/historyEvent/detail.php';
     }
-
-    require __DIR__ . '/../Views/event/historyEvent/detail.php';
-}
 }
