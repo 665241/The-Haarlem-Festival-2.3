@@ -7,18 +7,26 @@ use App\Services\Interfaces\Yummy\IRestaurantSessionService;
 use App\Models\Yummy\RestaurantModel;
 use App\Models\Yummy\RestaurantSessionModel;
 
+use App\Services\PageElementService;
+use App\ViewModels\PageElementViewModel;
+
+use Exception; 
+
 class RestaurantController {
     private IRestaurantService $service;
     private IChefService $chefService;
     private IRestaurantSessionService $sessionService;
+    private PageElementService $pageElementService;
 
-    public function __construct(IRestaurantService $service, IChefService $chefService, IRestaurantSessionService $sessionService) {
+    public function __construct(IRestaurantService $service, IChefService $chefService, IRestaurantSessionService $sessionService, PageElementService $pageElementService) {
         $this->service = $service;
         $this->chefService = $chefService;
         $this->sessionService = $sessionService;
+        $this->pageElementService = $pageElementService;
     }
 
     public function index() {
+        $vm = $this->buildPageVM('yummy');
         $restaurants = $this->service->getAllRestaurants();
         include __DIR__ . '/../Views/event/yummyEvent/index.php';
     }
@@ -29,101 +37,77 @@ class RestaurantController {
             exit;
         }
 
+        $vm = $this->buildPageVM('yummy');
         $restaurants = $this->service->getAllRestaurants();
         $chefs = $this->chefService->getAllChefs();
         include __DIR__ . '/../Views/admin/yummy/index.php';
     }
 
-    public function showCreateForm() {
+    public function store() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                $fileName = $this->service->uploadImage($_FILES['image_file'] ?? null);
+    
+                if ($this->service->processNewRestaurant($_POST, $fileName)) {
+                    header('Location: /admin/yummy?status=created');
+                    exit;
+                }
+
+                throw new Exception("Could not save restaurant to database.");
+            } catch (Exception $e) {
+                // Log error and pass message to view
+                error_log("Store Restaurant Error: " . $e->getMessage());
+                $error = $e->getMessage();
+            }
+        }
+
+        // to show create form 
         $chefs = $this->chefService->getAllChefs();
         $restaurant = new RestaurantModel();
         include __DIR__ . '/../Views/admin/yummy/createRestaurant.php';
     }
 
-    public function store() {
+
+    public function update($vars) {
+        $id = (int)$vars['id'];
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $fileName = $this->handleImageUpload('image_file', 'restaurant');
-            
-            $chefId = !empty($_POST['chef_id']) ? (int)$_POST['chef_id'] : null;
-
-            $restaurant = new RestaurantModel();
-            $restaurant->setName(trim($_POST['name'] ?? ''));
-            $restaurant->setDescription(trim($_POST['description'] ?? ''));
-            $restaurant->setLocation(trim($_POST['location'] ?? ''));
-            $restaurant->setCuisine(trim($_POST['cuisine'] ?? ''));
-            $restaurant->setLongDescription($_POST['long_description'] ?? '');
-            $restaurant->setSessionDuration((int)$_POST['session_duration']);
-            $restaurant->setReservationFee((float)$_POST['reservation_fee']);
-            $restaurant->setTotalSlots((int)$_POST['total_slots']);
-            $restaurant->setChefId($chefId);
-            if ($fileName) {
-                $restaurant->setImageUrl('/assets/uploads/restaurants/' . $fileName);
-            }
-
-            if ($this->service->createRestaurant($restaurant)) {
-                header('Location: /admin/yummy?status=created');
-                exit;
+            try {
+                $newImage = $this->service->uploadImage($_FILES['image_file'] ?? null);
+                    
+                if ($this->service->processUpdateRestaurant($id, $_POST, $newImage)) {
+                    header('Location: /admin/yummy?status=updated');
+                    exit;
+                }
+                throw new Exception("Update failed.");
+            } catch (Exception $e) {
+                error_log("Update Restaurant Error: " . $e->getMessage());
+                $error = $e->getMessage();
             }
         }
 
-        $chefs = $this->chefService->getAllChefs();
-        include __DIR__ . '/../Views/admin/yummy/create.php';
-    }
-
-    public function showEditForm($vars) {
-        $id = (int)$vars['id'];
+        // preparing data for the edit form
         $restaurant = $this->service->getRestaurantById($id);
-        $chefs = $this->chefService->getAllChefs();
-        $sessions = $this->sessionService->getAvailableSessions($id);
-
         if (!$restaurant) {
             header('Location: /admin/yummy?error=notfound');
             exit;
         }
-
-        include __DIR__ . '/../Views/admin/yummy/editRestaurant.php';
-    }
-
-    public function update($vars) {
-        $id = (int)$vars['id'];
-        $restaurant = $this->service->getRestaurantById($id);
-
-        $chefId = !empty($_POST['chef_id']) ? (int)$_POST['chef_id'] : null;
-
-        if (!$restaurant) {
-            header('Location: /admin/yummy');
-            exit;
-        }
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $restaurant->setName(trim($_POST['name']));
-            $restaurant->setDescription(trim($_POST['description']));
-            $restaurant->setLocation(trim($_POST['location']));
-            $restaurant->setCuisine(trim($_POST['cuisine']));
-            $restaurant->setLongDescription($_POST['long_description'] ?? '');
-            $restaurant->setSessionDuration((int)$_POST['session_duration']);
-            $restaurant->setReservationFee((float)$_POST['reservation_fee']);
-            $restaurant->setTotalSlots((int)$_POST['total_slots']);
-            $restaurant->setChefId($chefId);
-
-            $newImage = $this->handleImageUpload('image_file', 'restaurant');
-            if ($newImage) {
-                $restaurant->setImageUrl('/assets/uploads/restaurants/' . $newImage);
-            }
-
-            if ($this->service->updateRestaurant($restaurant)) {
-                header('Location: /admin/yummy?status=updated');
-                exit;
-            }
-        }
+        $chefs = $this->chefService->getAllChefs();
+        $sessions = $this->sessionService->getAvailableSessions($id);
         include __DIR__ . '/../Views/admin/yummy/editRestaurant.php';
     }
 
     public function delete($vars) {
-        $id = (int)$vars['id'];
-        $this->service->deleteRestaurant($id);
-        header('Location: /admin/yummy?status=deleted');
-        exit;
+        try {
+            $id = (int)$vars['id'];
+            if ($this->service->deleteRestaurant($id)) {
+                header('Location: /admin/yummy?status=deleted');
+                exit;
+            }
+        } catch (Exception $e) {
+            header('Location: /admin/yummy?status=error&message=' . urlencode($e->getMessage()));
+            exit;
+        }
     }
 
     public function showDetails($vars) {
@@ -143,6 +127,26 @@ class RestaurantController {
         }
 
         include __DIR__ . '/../Views/event/yummyEvent/restaurant.php';
+    }
+
+    public function showCreateForm() {
+        $chefs = $this->chefService->getAllChefs();
+        $restaurant = new RestaurantModel();
+        include __DIR__ . '/../Views/admin/yummy/createRestaurant.php';
+    }
+
+    public function showEditForm($vars) {
+        $id = (int)$vars['id'];
+        $restaurant = $this->service->getRestaurantById($id);
+        $chefs = $this->chefService->getAllChefs();
+        $sessions = $this->sessionService->getAvailableSessions($id);
+
+        if (!$restaurant) {
+            header('Location: /admin/yummy?error=notfound');
+            exit;
+        }
+
+        include __DIR__ . '/../Views/admin/yummy/editRestaurant.php';
     }
 
 
@@ -237,24 +241,10 @@ class RestaurantController {
 
     // Private methods 
 
-    private function handleImageUpload(string $inputName, string $prefix): ?string
+    private function buildPageVM(string $pageName): PageElementViewModel
     {
-        if (!isset($_FILES[$inputName]) || $_FILES[$inputName]['error'] !== UPLOAD_ERR_OK) {
-            return null;
-        }
-
-        $uploadDir = __DIR__ . '/../../public/assets/uploads/restaurants/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
-
-        $extension = strtolower(pathinfo($_FILES[$inputName]['name'], PATHINFO_EXTENSION));
-        $newFileName = uniqid($prefix . '_', true) . '.' . $extension;
-
-        if (move_uploaded_file($_FILES[$inputName]['tmp_name'], $uploadDir . $newFileName)) {
-            return $newFileName;
-        }
-        return null;
+        $sections = $this->pageElementService->getPageSections($pageName);
+        return new PageElementViewModel($sections);
     }
 
 }

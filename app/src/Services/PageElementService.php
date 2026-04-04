@@ -60,4 +60,40 @@ class PageElementService implements IPageElementService
 
     return $sections;
 }
+public function createElement(string $type,int $section,string $pageName,array $data): bool {
+
+    switch ($type) {
+        case 'text':
+            $subId = $this->textRepo->create($data['content']);
+            break;
+
+        // case 'image':
+        //     $subId = $this->imageRepo->createImage(
+        //         $data['imgURL'],
+        //         $data['altText']
+        //     );
+        //     break;
+
+        // case 'button':
+        //     $subId = $this->buttonRepo->createButton(
+        //         $data['text'],
+        //         $data['path']
+        //     );
+        //     break;
+
+        default:
+            throw new \Exception("Invalid type");
+    }
+
+    $position = $this->pageElementRepository
+        ->getNextPosition($pageName, $section);
+
+    return $this->pageElementRepository->create(
+        $subId,
+        $type,
+        $pageName,
+        $section,
+        $position
+    );
+}
 }

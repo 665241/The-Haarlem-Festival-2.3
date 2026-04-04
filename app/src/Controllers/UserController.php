@@ -4,27 +4,30 @@ namespace App\Controllers;
 
 use App\Services\Interfaces\IUserService;
 use App\Services\Interfaces\IAuthService;
+use App\Services\Interfaces\ITicketService;
 use App\Models\UserModel;
+use App\Framework\Controller;
+use InvalidArgumentException;
+use Exception;
 
-class UserController
+class UserController extends Controller
 {
     private IUserService $userService;
     private IAuthService $authService;
+    private ITicketService $ticketService;
 
-    public function __construct(IUserService $userService, IAuthService $authService)
+    public function __construct(IUserService $userService, IAuthService $authService, ITicketService $ticketService)
     {
         $this->userService = $userService;
         $this->authService = $authService;
+        $this->ticketService = $ticketService;
     }
 
     public function index($vars = [])
     {
         //Forbiden login for non-admins even if they type /admin/users in URL
-        if (empty($_SESSION['user']) || ($_SESSION['user']['role'] ?? '') !== 'Admin') {
-            http_response_code(403);
-            echo 'Forbidden';
-            exit;
-        }
+        $this->requireAdmin();
+
         $search = $_GET['search'] ?? '';
         $role = $_GET['role'] ?? '';
         $sort = $_GET['sort'] ?? 'created_at_desc';
@@ -36,87 +39,88 @@ class UserController
 
     public function create()
     {
-        $error = null;
-
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $email       = strtolower(trim($_POST['email'] ?? ''));
-            $password    = $_POST['password'] ?? '';
-            $userName    = trim($_POST['userName'] ?? '');
-            $fullName    = trim($_POST['fullName'] ?? '');
-            $phoneNumber = trim($_POST['phoneNumber'] ?? '');
-            $role        = $_POST['role'] ?? 'User';
-
-            if (empty($email) || empty($password) || empty($userName)) {
-                $error = 'Email, Password, and Username are required!';
-            } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $error = 'Invalid email format!';
-            } elseif ($this->authService->emailExists($email)) {
-                $error = 'Email already exists!';
-            }
-
-            if (!$error) {
-                $fileName = $this->handleImageUpload('profilePicture', 'user');
-
+            try {
+                // mapping  POST to user model (ID 0 for new user)
                 $user = new UserModel(
                     0,
-                    $email,
-                    password_hash($_POST['password'], PASSWORD_DEFAULT),
+                    strtolower(trim($_POST['email'] ?? '')),
+                        '', // password is handled by service
                     trim($_POST['userName'] ?? ''),
                     trim($_POST['fullName'] ?? ''),
                     trim($_POST['phoneNumber'] ?? ''),
                     $_POST['role'] ?? 'User',
                     date('Y-m-d H:i:s'),
                     null,
-                    $fileName,
+                    null, // Picture handled by Service
                     null
                 );
 
-                if ($this->userService->createUser($user)) {
-                    header('Location: /admin/users');
-                    exit;
-                }
-                $error = 'Failed to save user.';
-            }
+                $this->userService->createUser( $user, $_POST['password'] ?? '', $_FILES['profilePicture'] ?? null);
+
+                $_SESSION['flash_success'] = "User '{$user->getFullName()}' created successfully!";
+
+                header('Location: /admin/users');
+                exit;
+
+            } catch (InvalidArgumentException $e) {
+                // this catches validation errors from the service
+                $_SESSION['error'] = $e->getMessage();
+            } catch (Exception $e) {
+                // this catches system/database errors
+                error_log($e->getMessage());
+                $_SESSION['error'] = "A system error occurred.";
+            } 
         }
+
         require_once __DIR__ . '/../Views/admin/users/create.php';
     }
 
     public function edit()
     {
         $id = (int)($_GET['id'] ?? $_POST['id'] ?? 0);
-        $user = $this->userService->getUserById($id);
-
-        if (!$user) {
-            header('Location: /admin/users');
-            exit;
-        }
-
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $user->setEmail(strtolower(trim($_POST['email'])));
-            $user->setFullName(trim($_POST['fullName']));
-            $user->setUserName(trim($_POST['userName']));
-            $user->setPhoneNumber(trim($_POST['phoneNumber']));
-            $user->setRole($_POST['role']);
-
-            $newImage = $this->handleImageUpload('profilePicture', 'user');
-            if ($newImage) {
-                $user->setProfilePicture('/assets/uploads/users/' . $newImage);
-            }
-
-            if ($this->userService->updateUser($user)) {
+        try {
+            $user = $this->userService->getUserById($id);
+            if (!$user) {
+                $_SESSION['error'] = "User not found.";
                 header('Location: /admin/users');
                 exit;
             }
-            $error = "Failed to update user.";
+
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $user->setEmail(strtolower(trim($_POST['email'])));
+                $user->setFullName(trim($_POST['fullName']));
+                $user->setUserName(trim($_POST['userName']));
+                $user->setPhoneNumber(trim($_POST['phoneNumber']));
+                $user->setRole($_POST['role']);
+
+                $this->userService->updateUser($user, $_FILES['profilePicture'] ?? null);
+                
+                $_SESSION['flash_success'] = "Changes saved successfully!";
+                header('Location: /admin/users');
+                exit;
+            }
+        } catch (InvalidArgumentException $e) {
+            $_SESSION['error'] = $e->getMessage();
+        } catch (Exception $e) {
+            error_log("User Edit Error: " . $e->getMessage());
+            $_SESSION['error'] = "Failed to update user.";
         }
+
         require_once __DIR__ . '/../Views/admin/users/edit.php';
     }
 
     public function delete()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = (int)($_POST['id'] ?? 0);
-            $this->userService->deleteUser($id);
+            try {
+                $id = (int)($_POST['id'] ?? 0);
+                $this->userService->deleteUser($id);
+                $_SESSION['flash_success'] = "User is removed successfully!";
+            } catch (Exception $e) {
+                error_log("User Delete Error: " . $e->getMessage());
+                $_SESSION['error'] = "Failed to delete user.";
+            }
         }
         header('Location: /admin/users');
         exit;
@@ -125,121 +129,70 @@ class UserController
     public function restore()
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = (int)($_POST['id'] ?? 0);
-            $this->userService->restoreUser($id);
+            try {
+                $id = (int)($_POST['id'] ?? 0);
+                $this->userService->restoreUser($id);
+                $_SESSION['flash_success'] = "User is restored successfully!";
+            } catch (Exception $e) {
+                error_log("User Restore Error: " . $e->getMessage());
+                $_SESSION['error'] = "Failed to restore user.";
+            }
         }
         header('Location: /admin/users');
         exit;
     }
 
-    private function handleImageUpload(string $inputName, string $prefix): ?string
-    {
-        if (!isset($_FILES[$inputName]) || $_FILES[$inputName]['error'] !== UPLOAD_ERR_OK) {
-            return null;
-        }
-
-        $uploadDir = __DIR__ . '/../../public/assets/uploads/users/';
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0777, true);
-        }
-
-        $extension = strtolower(pathinfo($_FILES[$inputName]['name'], PATHINFO_EXTENSION));
-        $newFileName = uniqid($prefix . '_', true) . '.' . $extension;
-
-        if (move_uploaded_file($_FILES[$inputName]['tmp_name'], $uploadDir . $newFileName)) {
-            return $newFileName;
-        }
-        return null;
-    }
-    private function requireLogin(): void //helper method
-{
-    if (empty($_SESSION['user'])) {
-        header('Location: /login');
-        exit;
-    }
-}
     public function profile()
     {
-        $this->requireLogin();
-
-        $id = (int)($_SESSION['user']['id'] ?? 0);
+        if (!$this->isLoggedIn()) {
+            $this->redirect('/login');
+        }
+        
+        $sessionUser = $this->getCurrentUser();
+        $id = (int)$sessionUser['id'];
         $user = $this->userService->getUserById($id);
 
         if (!$user) {
-            header('Location: /');
-            exit;
+            $this->redirect('/');
         }
 
-        $success = $_SESSION['flash_success'] ?? null;
-        unset($_SESSION['flash_success']);
+        $tickets = $this->ticketService->getUserTickets($id);
+        $tickets = $this->ticketService->hydrateTickets($tickets);
 
         require_once __DIR__ . '/../Views/profile/show.php';
     }
 
     public function editProfile()
     {
-        $this->requireLogin();
+        if (!$this->isLoggedIn()) {
+            $this->redirect('/login');
+        }
 
-        $error = null;
-
-        $id = (int)($_SESSION['user']['id'] ?? 0);
-        $user = $this->userService->getUserById($id);
+        $sessionUser = $this->getCurrentUser();
+        $user = $this->userService->getUserById((int)$sessionUser['id']);
 
         if (!$user) {
-            header('Location: /');
-            exit;
+            $this->redirect('/');
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $newEmail = strtolower(trim($_POST['email'] ?? ''));
-            $newUserName = trim($_POST['userName'] ?? '');
-            $newFullName = trim($_POST['fullName'] ?? '');
-            $newPhoneNumber = trim($_POST['phoneNumber'] ?? '');
+            try {
+                $this->userService->updateProfile($user, $_POST, $_FILES['profilePicture'] ?? null);
 
-            if (empty($newEmail) || empty($newUserName)) {
-                $error = 'Email and Username are required!';
-            } elseif (!filter_var($newEmail, FILTER_VALIDATE_EMAIL)) {
-                $error = 'Invalid email format!';
-            } elseif ($newEmail !== strtolower($user->getEmail()) && $this->authService->emailExists($newEmail)) {
-                $error = 'Email already exists!';
-            }
+                // syncing session with updated Model data
+                $_SESSION['user']['email'] = $user->getEmail();
+                $_SESSION['user']['userName'] = $user->getUserName();
 
-            $newPassword = $_POST['newPassword'] ?? '';
-            $confirmPassword = $_POST['confirmPassword'] ?? '';
-
-            if (!$error && !empty($newPassword)) {
-                if (strlen($newPassword) < 6) {
-                    $error = 'Password must be at least 6 characters!';
-                } elseif ($newPassword !== $confirmPassword) {
-                    $error = 'Passwords do not match!';
-                }
-            }
-
-            if (!$error) {
-                $user->setEmail($newEmail);
-                $user->setUserName($newUserName);
-                $user->setFullName($newFullName);
-                $user->setPhoneNumber($newPhoneNumber);
-
-                $newImage = $this->handleImageUpload('profilePicture', 'user');
-                if ($newImage) {
-                    $user->setProfilePicture('/assets/uploads/users/' . $newImage);
-                }
-
-                if (!empty($newPassword)) {
-                    $user->setPassword(password_hash($newPassword, PASSWORD_DEFAULT));
-                }
-
-                if ($this->userService->updateOwnProfile($user)) {
-                    $_SESSION['user']['email'] = $newEmail;
-                    $_SESSION['user']['userName'] = $newUserName;
-
-                    $_SESSION['flash_success'] = 'Profile updated successfully!';
-                    header('Location: /profile');
-                    exit;
-                }
-
-                $error = 'Failed to update profile.';
+                $_SESSION['flash_success'] = 'Profile updated successfully!';
+                $this->redirect('/profile');
+                
+            } catch (\InvalidArgumentException $e) {
+                // catching errors from service 
+                $_SESSION['error'] = $e->getMessage();
+            } catch (\Exception $e) {
+                // catching unexpected system/DB errors
+                error_log("Profile Update Error: " . $e->getMessage());
+                $_SESSION['error'] = "A system error occurred.";
             }
         }
 
@@ -248,7 +201,9 @@ class UserController
 
     public function deleteSelf()
     {
-        $this->requireLogin();
+        if (!$this->isLoggedIn()) {
+            $this->redirect('/login');
+        }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)($_SESSION['user']['id'] ?? 0);
@@ -257,6 +212,7 @@ class UserController
                 $this->userService->deleteUser($id);
             }
 
+            $_SESSION['flash_success'] = "Your account is deleted successfully!";
             session_destroy();
             header('Location: /');
             exit;

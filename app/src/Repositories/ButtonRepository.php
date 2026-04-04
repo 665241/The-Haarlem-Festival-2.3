@@ -30,7 +30,7 @@ class ButtonRepository extends Repository implements IButtonRepository
         );
     }
     public function saveButtonTextChanges($id, $newText){
-        $sql = "UPDATE text SET text = :text WHERE id = :id";
+        $sql = "UPDATE button SET text = :text WHERE id = :id";
         return $this->connection->prepare($sql)->execute([
             'id'   => $id,
             'text' => $newText

@@ -10,4 +10,6 @@ interface IPageElementRepository
 
     public function mapToModel(array $row): PageElementModel;
     public function getById(int $id): ?PageElementModel;
+    public function getNextPosition(string $pageName, int $section): int;
+    public function create(int $subId,string $type,string $pageName,int $section,int $position): bool;
 }

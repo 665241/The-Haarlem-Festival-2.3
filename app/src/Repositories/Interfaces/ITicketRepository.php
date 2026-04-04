@@ -15,5 +15,6 @@ interface ITicketRepository {
     public function savePendingTicket(TicketModel $ticket, string $tempOrderId): bool;
     public function updateTicketsToPaid(string $orderId, string $actualStripeId): bool; 
     public function markAsExpired(string $orderId): bool;  
+    public function getTicketsByUserId(int $userId): array;
 
 }

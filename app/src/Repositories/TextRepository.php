@@ -35,4 +35,12 @@ class TextRepository extends Repository implements ITextRepository
             'content' => $newText
         ]);
     }
+    public function create(string $content): int
+{
+    $sql = "INSERT INTO text (content) VALUES (:content)";
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute(['content' => $content]);
+
+    return (int)$this->connection->lastInsertId();
+}
 }

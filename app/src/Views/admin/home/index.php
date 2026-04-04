@@ -132,9 +132,17 @@ onsubmit="return confirm('Delete this element?')">
 </table>
 
 <div style="text-align:center;">
-<form method="GET" action="/admin/elements/create">
-<input type="hidden" name="section" value="<?= htmlspecialchars($section) ?>">
-<button>Add Element to Section</button>
+<form method="GET" action="/admin/elements/createForm">
+     <input type="hidden" name="section" value="<?= htmlspecialchars($section) ?>">
+    <input type="hidden" name="pageName" value="<?= htmlspecialchars($pageName) ?>">
+    
+    <select name="type">
+        <option value="text">Text</option>
+        <option value="image">Image</option>
+        <option value="button">Button</option>
+    </select>
+
+    <button>Create</button>
 </form>
 </div>
 

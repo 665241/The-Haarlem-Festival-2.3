@@ -8,5 +8,5 @@ interface ITextRepository
 {
      public function getById(int $id): ?TextModel;
     public function saveTextChanges($id, $newText);
-
+   public function create(string $content): int;
 }

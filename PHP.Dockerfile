@@ -1,9 +1,10 @@
-FROM php:8.2-fpm
+FROM php:8.3-fpm
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
      curl ca-certificates gnupg2 apt-transport-https \
      unixodbc-dev \
+     git unzip \
   && rm -rf /var/lib/apt/lists/*
 
 # Microsoft repo + ODBC driver
@@ -16,5 +17,8 @@ RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor
 # PHP extensions for SQL Server
 RUN pecl install sqlsrv pdo_sqlsrv \
  && docker-php-ext-enable sqlsrv pdo_sqlsrv
+
+# Install Composer inside the PHP container
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app

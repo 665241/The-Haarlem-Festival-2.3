@@ -1737,3 +1737,225 @@ body.admin-page #sidebar .nav-item {
     color: #4b1608;
     transform: translateY(-2px);
 }
+
+
+
+/* Yummy banner */
+
+
+
+.section9 {
+    position: relative;
+    height: 75vh;
+    overflow: hidden; /* Clips image edges */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    z-index: 1; /* Creates a stacking context */
+
+    padding-left: 10%; /* Adjust this percentage to find your perfect 1/3 spot */
+    padding-right: 8%;
+    
+    color: white;
+    overflow: hidden;
+}
+
+/* 2. Force the image to the bottom layer */
+.section9 img {
+    position: absolute !important;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    z-index: -2 !important; /* Move behind EVERYTHING */
+}
+
+.section9::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, rgba(60, 15, 0, 0.7), rgba(60, 15, 0, 0.2));
+    z-index: -1 !important; 
+}
+
+/* 4. Ensure text/buttons stay on top */
+.section9 > * {
+    position: relative;
+    z-index: 2; 
+}
+
+/* Hero text & buttons */
+.section9 h1, .section1 p, .section1 a {
+  position: relative;
+  z-index: 1; /* on top of image */
+}
+
+.section9 h1 { font-size: 4rem; margin-bottom: 10px; }
+.section9 p { max-width: 600px; margin-bottom: 20px; }
+
+.section9 a:first-of-type {
+  background: #f7c9bc;
+  color: #4b1608;
+}
+.section9 a:last-of-type {
+  border: 1px solid #fff;
+  color: #fff;
+}
+
+
+
+/* Profile Page Specific Styles */
+
+
+
+.text-light-peach { color: #f4d9c6; }
+.text-peach { color: #f5c5ba; }
+.text-dark-brown { color: #3b0b00; }
+.x-small { font-size: 0.75rem; }
+.opacity-10 { opacity: 0.1; }
+.opacity-60 { opacity: 0.6; }
+.opacity-80 { opacity: 0.8; }
+.hover-opacity-100:hover { opacity: 1; }
+
+.festival-dark-page {
+    background: linear-gradient(180deg, #3b0b00 0%, #5b1300 100%);
+    min-height: 100vh;
+}
+
+
+.border-b-peach {
+    border-bottom: 1px solid rgba(245, 197, 186, 0.2);
+}
+
+.border-t-peach {
+    border-top: 1px solid rgba(245, 197, 186, 0.2);
+}
+
+.hero-overlay-title {
+    font-size: clamp(2.6rem, 5vw, 4rem);
+    margin-bottom: 14px;
+    line-height: 1;
+    font-weight: 700;
+}
+
+.festival-dark-card {
+    background: #4a1608;
+    border: 1px solid rgba(245, 197, 186, 0.2);
+    border-radius: 24px;
+    padding: 35px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Avatar Styling */
+.profile-avatar-styled {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(245, 197, 186, 0.4);
+    padding: 3px;
+}
+
+/* Section Labels (Matching Sidebar Heading style) */
+.section-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: #ff8a2a; /* Stat-number color from homepage */
+    letter-spacing: 1px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.card-header-peach {
+    background-color: #f4c7b8;
+    color: #3b0b00;
+}
+
+.custom-dark-table.table-hover tbody tr:hover {
+    background-color: rgba(245, 197, 186, 0.05); /* Soft peach hover */
+}
+
+.custom-dark-table thead th {
+    background-color: transparent;
+    color: #f5c5ba;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    padding: 18px 0;
+    border: none;
+}
+
+.ticket-row-styled td {
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(245, 197, 186, 0.1);
+    background-color: transparent !important; /* Forces transparency on dark bg */
+}
+
+
+.icon-box-peach {
+    width: 48px;
+    height: 48px;
+    background: rgba(244, 199, 184, 0.1);
+    color: #ff8a2a;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    border: 1px solid rgba(245, 197, 186, 0.2);
+}
+
+
+.more-btn.small-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    display: inline-block;
+    width: auto;
+}
+
+/* Soft badges */
+.bg-soft-orange {
+    background-color: rgba(255, 138, 42, 0.15);
+}
+
+.btn-delete-custom {
+    background-color: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important; /* Subtle white outline */
+    color: rgba(255, 255, 255, 0.6) !important;          /* Dimmed white text */
+    border-radius: 999px;                               /* Matches your pill style */
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.btn-delete-custom:hover {
+    background-color: #dc3545 !important;               /* Standard Bootstrap Red */
+    border-color: #dc3545 !important;
+    color: white !important;
+    opacity: 1 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);      /* Red glow */
+}
+
+
+
+
+/* section CMS */
+
+
+
+.admin-element-preview img {
+    width: 100% !important;
+    height: auto !important;
+    object-fit: cover;
+}
+/* This resets the 'Hero' height just for the admin preview box */
+.admin-element-preview .section4 {
+    height: 120px !important;
+    padding: 10px !important;
+}
+.admin-element-preview .section4 h1 {
+    font-size: 1.2rem !important;
+}
+
+

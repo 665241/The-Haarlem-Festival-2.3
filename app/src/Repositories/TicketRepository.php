@@ -4,6 +4,7 @@ namespace App\Repositories;
 use App\Repositories\Interfaces\ITicketRepository; 
 use App\Framework\Repository;
 use App\Models\TicketModel;
+use App\Models\EventModel;
 use PDO;
 
 class TicketRepository extends Repository implements ITicketRepository
@@ -167,6 +168,45 @@ class TicketRepository extends Repository implements ITicketRepository
         $stmt->execute(['orderId' => $orderId]); 
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    // In App/Repositories/TicketRepository.php
+
+    public function getTicketsByUserId(int $userId): array
+    {
+        $sql = "SELECT t.*, e.eventType, e.subEventId 
+            FROM tickets t
+            JOIN [event] e ON t.event_id = e.id
+            WHERE t.user_id = :userId";
+                
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute(['userId' => $userId]);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $tickets = [];
+        foreach ($rows as $row) {
+            // if the DB has 'jazz', this returns EventTypeEnum::JazzEvent
+            $enumType = \App\Models\Enums\EventTypeEnum::tryFrom($row['eventType']);
+
+            //passing null for details because TicketService->hydrateTickets() will fill them
+            $event = new \App\Models\EventModel(
+                (int)$row['event_id'],
+                $enumType,
+                (int)$row['sub_event_id']
+            );
+
+            $ticket = new \App\Models\TicketModel(
+                (int)$row['id'],
+                $event,
+                null, 
+                (int)$row['number_of_people'],
+                $row['unique_ticket_token'] ?? null
+            );
+
+            $tickets[] = $ticket;
+        }
+
+        return $tickets;
     }
 
 }

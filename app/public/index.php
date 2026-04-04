@@ -1,5 +1,5 @@
 <?php
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../../vendor/autoload.php';
 
 session_start();
 error_reporting(E_ALL);
@@ -102,6 +102,8 @@ $dispatcher = simpleDispatcher(function (RouteCollector $r) {
     $r->addRoute('POST', '/admin/extrakids/save', ['App\Controllers\KidsEventController', 'storeExtra']);
     $r->addRoute('GET', '/admin/extrakids/edit/{id:\d+}', ['App\Controllers\KidsEventController', 'editExtra']);
     $r->addRoute('POST', '/admin/extrakids/delete', ['App\Controllers\KidsEventController', 'deleteExtra']);
+    $r->addRoute('GET',  '/admin/elements/createForm', ['App\Controllers\PageElementController', 'createForm']);
+    $r->addRoute('POST',  '/admin/elements/store', ['App\Controllers\PageElementController', 'store']);
 
     $r->addRoute('POST',  '/admin/export-csv', ['App\Controllers\TicketController', 'exportCsv']);
 
@@ -126,6 +128,26 @@ $dispatcher = simpleDispatcher(function (RouteCollector $r) {
     $r->addRoute('POST', '/admin/history/venues/edit', ['App\Controllers\HistoryController', 'updateVenue']);
     $r->addRoute('POST', '/admin/history/venues/delete', ['App\Controllers\HistoryController', 'deleteVenue']);
 
+
+    // Public Dance routes
+    $r->addRoute('GET', '/dance', ['App\Controllers\DanceController', 'index']);
+    $r->addRoute('GET', '/dance/{id:\d+}', ['App\Controllers\DanceController', 'detail']);
+
+    // Admin Dance Artist Management
+    $r->addRoute('GET', '/admin/dance', ['App\Controllers\DanceController', 'adminIndex']);
+    $r->addRoute('GET', '/admin/dance/create', ['App\Controllers\DanceController', 'showCreateForm']);
+    $r->addRoute('POST', '/admin/dance/create', ['App\Controllers\DanceController', 'store']);
+    $r->addRoute('GET', '/admin/dance/edit/{id:\d+}', ['App\Controllers\DanceController', 'showEditForm']);
+    $r->addRoute('POST', '/admin/dance/edit/{id:\d+}', ['App\Controllers\DanceController', 'update']);
+    $r->addRoute('GET', '/admin/dance/delete/{id:\d+}', ['App\Controllers\DanceController', 'delete']);
+
+    // Admin Dance Event Management
+    $r->addRoute('GET', '/admin/dance/events/create', ['App\Controllers\DanceController', 'showCreateEventForm']);
+    $r->addRoute('POST', '/admin/dance/events/create', ['App\Controllers\DanceController', 'storeEvent']);
+    $r->addRoute('GET', '/admin/dance/events/edit/{id:\d+}', ['App\Controllers\DanceController', 'showEditEventForm']);
+    $r->addRoute('POST', '/admin/dance/events/edit/{id:\d+}', ['App\Controllers\DanceController', 'updateEvent']);
+    $r->addRoute('GET', '/admin/dance/events/delete/{id:\d+}', ['App\Controllers\DanceController', 'deleteEvent']);
+
     $r->addRoute('GET', '/admin/history/tours', ['App\Controllers\HistoryController', 'adminTours']);
     $r->addRoute('GET', '/admin/history/tours/create', ['App\Controllers\HistoryController', 'createTour']);
     $r->addRoute('POST', '/admin/history/tours/create', ['App\Controllers\HistoryController', 'storeTour']);
@@ -145,7 +167,7 @@ $dispatcher = simpleDispatcher(function (RouteCollector $r) {
     $r->addRoute('POST', '/forgetPassword', ['App\Controllers\AuthController', 'sendResetLink']);
     $r->addRoute('GET', '/resetPassword', ['App\Controllers\AuthController', 'showResetPassword']);
     $r->addRoute('POST', '/resetPassword', ['App\Controllers\AuthController', 'resetPassword']);
-    $r->addRoute('GET', '/dance', ['App\Controllers\DanceController', 'index']);
+    
 
     // QR/employee scanning routes
     $r->addRoute('GET', '/qr', ['App\Controllers\QrController', 'index']);
@@ -196,17 +218,45 @@ switch ($routeInfo[0]) {
 
         if ($class === 'App\Controllers\UserController') {
             $repository = new \App\Repositories\UserRepository();
-            $service = new \App\Services\UserService($repository);
             $authService = new \App\Services\AuthService($repository);
-            $controller = new $class($service, $authService);
+            $ticketRepo = new \App\Repositories\TicketRepository();
+
+            $restaurantRepo = new \App\Repositories\Yummy\RestaurantRepository();
+            $restaurantService = new \App\Services\Yummy\RestaurantService($restaurantRepo);
+            $restaurantSessionRepo = new \App\Repositories\Yummy\RestaurantSessionRepository();
+            $restaurantSessionService = new \App\Services\Yummy\RestaurantSessionService($restaurantSessionRepo, $restaurantRepo);
+
+            $artistRepository = new \App\Repositories\ArtistRepository();
+            $artistService = new \App\Services\ArtistService($artistRepository);
+            $jazzEventRepository = new \App\Repositories\JazzEventRepository();
+            $jazzEventService = new \App\Services\JazzEventService($jazzEventRepository);
+            $jazzPassRepository = new \App\Repositories\JazzPassRepository();
+            $jazzPassService = new \App\Services\JazzPassService($jazzPassRepository);
+
+            $historyVenueRepository = new \App\Repositories\HistoryVenueRepository();
+            $historyEventRepository = new \App\Repositories\HistoryEventRepository();
+            $historyService = new \App\Services\HistoryService($historyEventRepository, $historyVenueRepository);
+
+            $kidsEventRepo = new \App\Repositories\KidsEventRepository();
+            $kidsEventService = new \App\Services\KidsEventService($kidsEventRepo);
+
+          
+            $eventRepo = new App\Repositories\EventRepository();
+            $eventService = new App\Services\EventService($eventRepo);
+            $personalProgramService = new \App\Services\PersonalProgramService($eventRepo, $repository);
+            
+            $ticketService = new \App\Services\TicketService($ticketRepo, $restaurantSessionService, $restaurantService, $jazzEventService, $historyService, $kidsEventService, $historyVenueRepository, $artistService, $jazzPassService, $eventService, $personalProgramService);
+            $service = new \App\Services\UserService($repository, $authService);
+            $controller = new $class($service, $authService, $ticketService);
         } elseif ($class === 'App\Controllers\RestaurantController') {
+            $pageElementService = new \App\Services\PageElementService(new \App\Repositories\PageElementRepository());
             $repository = new \App\Repositories\Yummy\RestaurantRepository();
             $chefRepo = new \App\Repositories\Yummy\ChefRepository();
             $sessionRepo = new \App\Repositories\Yummy\RestaurantSessionRepository();
             $service = new \App\Services\Yummy\RestaurantService($repository);
             $chefService = new \App\Services\Yummy\ChefService($chefRepo);
             $sessionService = new \App\Services\Yummy\RestaurantSessionService($sessionRepo, $repository);
-            $controller = new $class($service, $chefService, $sessionService);
+            $controller = new $class($service, $chefService, $sessionService, $pageElementService);
         } elseif ($class === 'App\Controllers\JazzController') {
             $artistRepository = new \App\Repositories\ArtistRepository();
             $artistService = new \App\Services\ArtistService($artistRepository);
@@ -237,11 +287,13 @@ switch ($routeInfo[0]) {
 
             $userRepo = new App\Repositories\UserRepository();
             $eventRepo = new App\Repositories\EventRepository();
+            $eventService = new App\Services\EventService($eventRepo);
             $ticketRepo =  new \App\Repositories\TicketRepository();
             $personalProgramService = new \App\Services\PersonalProgramService($eventRepo, $userRepo);
             $kidsEventRepo = new \App\Repositories\KidsEventRepository();
             $kidsEventService = new \App\Services\KidsEventService($kidsEventRepo);
-            $controller = new $class($personalProgramService, $restaurantService, $restaurantSessionService, $artistService, $jazzEventService, $jazzPassService, $ticketRepo, $kidsEventService);
+            $ticketService = new \App\Services\TicketService($ticketRepo, $restaurantSessionService, $restaurantService, $jazzEventService, $historyService, $kidsEventService, $historyVenueRepository, $artistService, $jazzPassService, $eventService, $personalProgramService);
+            $controller = new $class($ticketRepo, $ticketService);
         } elseif ($class === 'App\Controllers\PaymentController') {
             $restaurantRepo = new \App\Repositories\Yummy\RestaurantRepository();
             $restaurantService = new \App\Services\Yummy\RestaurantService($restaurantRepo);
@@ -259,7 +311,8 @@ switch ($routeInfo[0]) {
             $jazzPassRepository = new \App\Repositories\JazzPassRepository();
             $jazzPassService = new \App\Services\JazzPassService($jazzPassRepository);
 
-            $userService = new \App\Services\UserService($userRepo);
+            $authService = new \App\Services\AuthService($userRepo); 
+            $userService = new \App\Services\UserService($userRepo, $authService);
 
             $paymentService = new \App\Services\PaymentService($ticketRepo, $restaurantSessionService, $jazzEventService, $jazzPassService, $userRepo, $eventRepo);
 

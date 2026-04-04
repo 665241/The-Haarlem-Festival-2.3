@@ -14,10 +14,6 @@
                 <h5 class="mb-0">Updating: <?= htmlspecialchars($user->getFullName()) ?></h5>
             </div>
             <div class="card-body p-4">
-                <?php if (isset($error)): ?>
-                    <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-                <?php endif; ?>
-
                 <form action="/admin/users/edit?id=<?= $user->getId() ?>" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="id" value="<?= $user->getId() ?>">
 

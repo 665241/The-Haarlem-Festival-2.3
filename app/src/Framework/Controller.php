@@ -21,7 +21,7 @@ class Controller
         $user = $this->getCurrentUser();
         
         if (!$user || ($user['role'] ?? '') !== $role) {
-            $_SESSION['flash_error'] = "Access Denied: You do not have the $role role.";
+            $_SESSION['error'] = "Access Denied: You do not have the $role role.";
             header('Location: /login');
             exit;
         }

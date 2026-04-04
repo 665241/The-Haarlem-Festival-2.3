@@ -4,17 +4,16 @@ require __DIR__ . '/../../partials/header.php';
 ?>
 
 <div style="background-color: #3a0d00; min-height: 100vh; color: #f4d9c6;">
-
-    <section class="jazz-hero">
-        <img src="/assets/images/yummy-banner.jpg" alt="Yummy Event Banner">
-        <div class="hero-overlay">
-            <h1>Yummy Haarlem</h1>
-            <p class="lead">
-                Experience the culinary heart of the Netherlands. From historic taverns to 
-                modern gastronomy, find your perfect table in Haarlem.
-            </p>
+    
+    <!-- heading & description section -->
+    <?php foreach ($vm->getSections() as $section => $elements): ?>
+        <div class="section<?= htmlspecialchars($section) ?>">
+            
+            <?php foreach ($elements as $element): ?>
+                <?= $element->render(); ?>
+            <?php endforeach; ?>
         </div>
-    </section>
+    <?php endforeach; ?>
 
     <div class="container py-5">
         <section class="restaurant-list">
