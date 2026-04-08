@@ -36,23 +36,57 @@ class DanceEventRepository extends Repository implements IDanceEventRepository
     /**
      * Get one dance event by its ID.
      */
-    public function getById(int $id): ?DanceEventModel
-    {
-        $stmt = $this->connection->prepare("
-            SELECT *
-            FROM DanceEvent
-            WHERE DanceEventID = :DanceEventID
-              AND deleted_at IS NULL
-        ");
+ public function getById(int $id): ?DanceEventModel
+{
+    $stmt = $this->connection->prepare("
+        SELECT *
+        FROM DanceEvent
+        WHERE DanceEventID = :DanceEventID
+          AND deleted_at IS NULL
+    ");
 
-        $stmt->execute([
-            'DanceEventID' => $id
-        ]);
+    $stmt->execute([
+        'DanceEventID' => $id
+    ]);
 
-        $event = $stmt->fetchObject(DanceEventModel::class);
+    $row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-        return $event ?: null;
+    if (!$row) {
+        return null;
     }
+
+    $event = new DanceEventModel();
+
+    if (method_exists($event, 'setArtistId')) {
+        $event->setArtistId((int)$row['ArtistID']);
+    }
+
+    if (method_exists($event, 'setDanceVenueId')) {
+        $event->setDanceVenueId((int)$row['DanceVenueID']);
+    }
+
+    if (method_exists($event, 'setDisplayTitle')) {
+        $event->setDisplayTitle($row['DisplayTitle'] ?? null);
+    }
+
+    if (method_exists($event, 'setStartDateTime')) {
+        $event->setStartDateTime($row['StartDateTime']);
+    }
+
+    if (method_exists($event, 'setEndDateTime')) {
+        $event->setEndDateTime($row['EndDateTime'] ?? null);
+    }
+
+    if (method_exists($event, 'setPrice')) {
+        $event->setPrice((float)$row['Price']);
+    }
+
+    if (method_exists($event, 'setCapacity')) {
+        $event->setCapacity((int)$row['Capacity']);
+    }
+
+    return $event;
+}
 
     /**
      * Get all dance events for one artist/DJ.

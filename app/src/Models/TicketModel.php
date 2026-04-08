@@ -7,6 +7,7 @@ use App\Models\UserModel;
 use App\Models\Yummy\RestaurantModel;
 use App\Models\JazzPassModel;
 use App\Models\JazzEventModel;
+use App\Models\DanceEventModel;
 
 class TicketModel
 {
@@ -85,6 +86,9 @@ class TicketModel
 
         if (is_array($details) && isset($details['jazzEvent']) && $details['jazzEvent'] instanceof      JazzEventModel) {
             return (float)$details['jazzEvent']->getPrice();
+        }
+        if (is_array($details) && isset($details['danceEvent']) && $details['danceEvent'] instanceof DanceEventModel) {
+        return (float)$details['danceEvent']->getPrice();
         }
         if ($details instanceof \App\Models\HistoryEventModel) {
             return (float)$details->getPriceIndividual();

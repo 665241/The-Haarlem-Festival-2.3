@@ -15,6 +15,7 @@ use App\Repositories\Interfaces\IHistoryVenueRepository;
 use App\Services\Interfaces\IArtistService;
 use App\Services\Interfaces\IJazzPassService;
 use App\Models\HistoryVenueModel;
+use App\Services\Interfaces\IDanceEventService;
 
 use App\Services\Interfaces\IEventService;
 use App\Services\Interfaces\IPersonalProgramService;
@@ -27,6 +28,7 @@ class TicketService implements ITicketService
       private IRestaurantSessionService $restaurantSessionService,
       private IRestaurantService $restaurantService,
       private IJazzEventService $jazzEventService,
+      private IDanceEventService $danceEventService,
       private IHistoryService $historyService,
       private IKidsEventService $kidsEventService,
       private IHistoryVenueRepository $historyVenueRepository,
@@ -34,6 +36,8 @@ class TicketService implements ITicketService
       private IJazzPassService $jazzPassService,
       private IEventService $eventService,
       private IPersonalProgramService $programService
+      
+      
    ) {}
 
    public function savePaidTicket(TicketModel $ticket, string $stripeId): bool
@@ -144,6 +148,22 @@ class TicketService implements ITicketService
             }
          }
 
+         //Dance
+         if (strcasecmp($event->getEventType()->value, 'dance') === 0) {
+   $danceEvent = $this->danceEventService->getDanceEventById($subId);
+
+   if ($danceEvent) {
+      $artist = $this->artistService->getArtistById($danceEvent->getArtistId());
+      $venueInfo = $this->danceEventService->getVenueInfoByDanceEventId($subId);
+
+      $event->setDetails([
+         'artist' => $artist,
+         'venueInfo' => $venueInfo,
+         'danceEvent' => $danceEvent
+      ]);
+   }
+}
+
          if (strcasecmp($event->getEventType()->value, 'jazzpass') === 0) {
             $jazzPass = $this->jazzPassService->getPassById($subId);
 
@@ -229,6 +249,16 @@ class TicketService implements ITicketService
             throw new \Exception("Sorry, there are only $remaining passes left.");
          }
       }
+       
+      //Dance
+if (strcasecmp($eventType, 'dance') === 0) {
+   $danceEvent = $this->danceEventService->getDanceEventById($subEventId);
+
+   if (!$danceEvent || $danceEvent->getCapacity() < $numberOfPeople) {
+      $remaining = $danceEvent ? $danceEvent->getCapacity() : 0;
+      throw new \Exception("Sorry, there are only $remaining tickets left for this dance event.");
+   }
+}
 
       $eventId = $this->eventService->checkEventType($subEventId, $eventType);
 
