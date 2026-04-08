@@ -84,6 +84,9 @@ class DanceEventRepository extends Repository implements IDanceEventRepository
     if (method_exists($event, 'setCapacity')) {
         $event->setCapacity((int)$row['Capacity']);
     }
+    if (method_exists($event, 'setTicketsLeft')) {
+    $event->setTicketsLeft((int)$row['TicketsLeft']);
+}
 
     return $event;
 }
@@ -161,8 +164,8 @@ class DanceEventRepository extends Repository implements IDanceEventRepository
 
     try {
         $stmt = $this->connection->prepare("
-    INSERT INTO DanceEvent (ArtistID, DanceVenueID, StartDateTime, EndDateTime, Price, Capacity, DisplayTitle)
-    VALUES (:ArtistID, :DanceVenueID, :StartDateTime, :EndDateTime, :Price, :Capacity, :DisplayTitle)
+    INSERT INTO DanceEvent (ArtistID, DanceVenueID, StartDateTime, EndDateTime, Price, Capacity, TicketsLeft, DisplayTitle)
+    VALUES (:ArtistID, :DanceVenueID, :StartDateTime, :EndDateTime, :Price, :Capacity, :TicketsLeft, :DisplayTitle)
 ");
 
        $success = $stmt->execute([
@@ -172,7 +175,9 @@ class DanceEventRepository extends Repository implements IDanceEventRepository
     'EndDateTime' => $event->getEndDateTime(),
     'Price' => $event->getPrice(),
     'Capacity' => $event->getCapacity(),
+    'TicketsLeft' => $event->getTicketsLeft(),
     'DisplayTitle' => $event->getDisplayTitle()
+    
 ]);
 
         if (!$success) {
@@ -206,14 +211,15 @@ class DanceEventRepository extends Repository implements IDanceEventRepository
    public function update(int $id, DanceEventModel $event): bool
 {
     $stmt = $this->connection->prepare("
-        UPDATE DanceEvent
-        SET ArtistID = :ArtistID,
-            DanceVenueID = :DanceVenueID,
-            StartDateTime = :StartDateTime,
-            EndDateTime = :EndDateTime,
-            Price = :Price,
-            Capacity = :Capacity,
-            updated_at = GETDATE()
+       UPDATE DanceEvent
+    SET ArtistID = :ArtistID,
+    DanceVenueID = :DanceVenueID,
+    StartDateTime = :StartDateTime,
+    EndDateTime = :EndDateTime,
+    Price = :Price,
+    Capacity = :Capacity,
+    TicketsLeft = :TicketsLeft,
+    updated_at = GETDATE()
         WHERE DanceEventID = :DanceEventID
           AND deleted_at IS NULL
     ");
@@ -225,6 +231,7 @@ class DanceEventRepository extends Repository implements IDanceEventRepository
         'StartDateTime' => $event->getStartDateTime(),
         'EndDateTime' => $event->getEndDateTime(),
         'Price' => $event->getPrice(),
+        'TicketsLeft' => $event->getTicketsLeft(),
         'Capacity' => $event->getCapacity()
     ]);
 }
@@ -304,4 +311,23 @@ class DanceEventRepository extends Repository implements IDanceEventRepository
             'subEventId' => $subEventId
         ]);
     }
+
+    public function decreaseTicketsLeft(int $danceEventId, int $quantity): bool
+{
+    $stmt = $this->connection->prepare("
+        UPDATE DanceEvent
+        SET TicketsLeft = TicketsLeft - :quantityToSubtract
+        WHERE DanceEventID = :danceEventId
+          AND TicketsLeft >= :minimumRequired
+          AND deleted_at IS NULL
+    ");
+
+    $stmt->execute([
+        'quantityToSubtract' => $quantity,
+        'minimumRequired' => $quantity,
+        'danceEventId' => $danceEventId
+    ]);
+
+    return $stmt->rowCount() > 0;
+}
 }

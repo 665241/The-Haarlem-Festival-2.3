@@ -252,12 +252,12 @@ class TicketService implements ITicketService
        
       //Dance
 if (strcasecmp($eventType, 'dance') === 0) {
-   $danceEvent = $this->danceEventService->getDanceEventById($subEventId);
+    $danceEvent = $this->danceEventService->getDanceEventById($subEventId);
 
-   if (!$danceEvent || $danceEvent->getCapacity() < $numberOfPeople) {
-      $remaining = $danceEvent ? $danceEvent->getCapacity() : 0;
-      throw new \Exception("Sorry, there are only $remaining tickets left for this dance event.");
-   }
+    if (!$danceEvent || $danceEvent->getTicketsLeft() < $numberOfPeople) {
+        $remaining = $danceEvent ? $danceEvent->getTicketsLeft() : 0;
+        throw new \Exception("Sorry, there are only $remaining tickets left for this dance event.");
+    }
 }
 
       $eventId = $this->eventService->checkEventType($subEventId, $eventType);

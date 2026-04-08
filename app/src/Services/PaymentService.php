@@ -131,7 +131,10 @@ class PaymentService implements IPaymentService
 
         foreach ($rawTickets as $row) {
             $event = $this->eventRepository->getById((int)$row['event_id']);
-            $user = $row['user_id'] ? $this->userRepository->getById((int)$row['user_id']) : null;
+            $user = null;
+if (!empty($row['user_id'])) {
+    $user = $this->userRepository->getById((int)$row['user_id']);
+}
 
             $ticket = new TicketModel(
                 (int)$row['id'],
@@ -149,35 +152,50 @@ class PaymentService implements IPaymentService
         return $populatedTickets;
     }
 
-    private function populateTicketDetails(TicketModel $ticket): void
-    {
-        $event = $ticket->getEvent();
-        //$subId = $ticket->getProgramItemId() ?: $event->getSubEventId();
-        $subId = $event->getSubEventId() ?: $ticket->getProgramItemId(); // fallback to program item id if sub event id is not set
-        $type = strtolower($event->getEventType()->value);
+   private function populateTicketDetails(TicketModel $ticket): void
+{
+    $event = $ticket->getEvent();
 
-        if ($type === 'reservation') {
-            $repo = new \App\Repositories\Yummy\RestaurantRepository();
-            $sessRepo = new \App\Repositories\Yummy\RestaurantSessionRepository();
-            $session = $sessRepo->getSessionById($subId);
-            if ($session) {
-                $restaurant = $repo->getById($session->getRestaurantId());
-                $restaurant->setSessionData($session);
-                $event->setDetails($restaurant);
-            }
-        } 
-        elseif ($type === 'jazz') {
-            $jazzRepo = new \App\Repositories\JazzEventRepository();
-            $artistRepo = new \App\Repositories\ArtistRepository();
-            $jazzEvent = $jazzRepo->getById($subId);
-            if ($jazzEvent) {
-                $event->setDetails([
-                    'artist' => $artistRepo->getById($jazzEvent->getArtistId()),
-                    'jazzEvent' => $jazzEvent
-                ]);
-            }
-        }
-        // add similar blocks for 'tour' and 'kids'
+    $subId = $event->getSubEventId();
+    if (!$subId) {
+        $subId = $ticket->getProgramItemId();
     }
+
+    $type = strtolower($event->getEventType()->value);
+
+    if ($type === 'reservation') {
+        $repo = new \App\Repositories\Yummy\RestaurantRepository();
+        $sessRepo = new \App\Repositories\Yummy\RestaurantSessionRepository();
+        $session = $sessRepo->getSessionById($subId);
+
+        if ($session) {
+            $restaurant = $repo->getById($session->getRestaurantId());
+            $restaurant->setSessionData($session);
+            $event->setDetails($restaurant);
+        }
+    } elseif ($type === 'jazz') {
+        $jazzRepo = new \App\Repositories\JazzEventRepository();
+        $artistRepo = new \App\Repositories\ArtistRepository();
+        $jazzEvent = $jazzRepo->getById($subId);
+
+        if ($jazzEvent) {
+            $event->setDetails([
+                'artist' => $artistRepo->getById($jazzEvent->getArtistId()),
+                'jazzEvent' => $jazzEvent
+            ]);
+        }
+    } elseif ($type === 'dance') {
+        $danceRepo = new \App\Repositories\DanceEventRepository();
+        $artistRepo = new \App\Repositories\ArtistRepository();
+        $danceEvent = $danceRepo->getById($subId);
+
+        if ($danceEvent) {
+            $event->setDetails([
+                'artist' => $artistRepo->getById($danceEvent->getArtistId()),
+                'danceEvent' => $danceEvent
+            ]);
+        }
+    }
+}
 
 }

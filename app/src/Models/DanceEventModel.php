@@ -102,15 +102,26 @@ class DanceEventModel
         $this->VenueName = $venueName;
     }
     public function getCapacity(): int
-{
+    {
     return $this->Capacity;
-}
-public function setCapacity(int $capacity): void
-{
+    }
+    public function setCapacity(int $capacity): void
+    {
     $this->Capacity = $capacity;
-}
-public function setDisplayTitle(?string $displayTitle): void
-{
+    }
+    public function setDisplayTitle(?string $displayTitle): void
+    {
     $this->DisplayTitle = $displayTitle;
+    }
+    private int $TicketsLeft;
+
+public function getTicketsLeft(): int
+{
+    return $this->TicketsLeft;
+}
+
+public function setTicketsLeft(int $ticketsLeft): void
+{
+    $this->TicketsLeft = $ticketsLeft;
 }
 }

@@ -41,4 +41,6 @@ interface IDanceEventRepository
      * Delete a dance event
      */
     public function delete(int $id): bool;
+
+    public function decreaseTicketsLeft(int $danceEventId, int $quantity): bool;
 }

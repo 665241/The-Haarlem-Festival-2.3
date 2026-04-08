@@ -20,4 +20,6 @@ interface IDanceEventService
     public function updateDanceEvent(int $id, DanceEventModel $event): bool;
 
     public function deleteDanceEvent(int $id): bool;
+
+    public function decreaseTicketsLeft(int $danceEventId, int $quantity): bool;
 }
