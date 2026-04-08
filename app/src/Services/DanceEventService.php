@@ -76,9 +76,9 @@ class DanceEventService implements IDanceEventService
     {
         return $this->repository->delete($id);
     }
-
     public function decreaseTicketsLeft(int $danceEventId, int $quantity): bool
 {
     return $this->repository->decreaseTicketsLeft($danceEventId, $quantity);
 }
+
 }

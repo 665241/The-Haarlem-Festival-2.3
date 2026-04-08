@@ -12,6 +12,7 @@ use App\Repositories\Interfaces\IUserRepository;
 use App\Services\KidsEventService;
 use App\Models\PersonalProgram;
 use App\Models\TicketModel; 
+use App\Services\Interfaces\IDanceEventService;
 
 class PaymentService implements IPaymentService
 {
@@ -20,6 +21,7 @@ class PaymentService implements IPaymentService
         private ITicketRepository $ticketRepository, 
         private IRestaurantSessionService $restaurantSessionService,
         private IJazzEventService $jazzService,
+        private IDanceEventService $danceService,
         private IJazzPassService $jazzPassService,
         private IUserRepository $userRepository,
         private IEventRepository $eventRepository
@@ -47,6 +49,7 @@ class PaymentService implements IPaymentService
 
             match (strtolower($event->getEventType()->value)) {
                 'jazz'        => $this->jazzService->decreaseTicketsLeft($targetId, $qty),
+                'dance'       => $this->danceService->decreaseTicketsLeft($targetId, $qty),
                 'jazzpass'    => $this->jazzPassService->decreaseTicketsLeft($targetId, $qty),
                 'reservation' => $this->restaurantSessionService->updateCapacity($targetId, -$qty),
                  'kids'        => $this->kidsService->decreaseCapacity($targetId, $qty),

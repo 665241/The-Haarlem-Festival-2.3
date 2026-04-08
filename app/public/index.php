@@ -328,11 +328,14 @@ switch ($routeInfo[0]) {
             $jazzPassRepository = new \App\Repositories\JazzPassRepository();
             $jazzPassService = new \App\Services\JazzPassService($jazzPassRepository);
 
+            $danceEventRepository = new \App\Repositories\DanceEventRepository();
+            $danceEventService = new \App\Services\DanceEventService($danceEventRepository);
+
             $authService = new \App\Services\AuthService($userRepo);
             $userCommunicationService = new \App\Services\CommunicationService();
             $userService = new \App\Services\UserService($userRepo, $authService, $userCommunicationService);
 
-            $paymentService = new \App\Services\PaymentService($ticketRepo, $restaurantSessionService, $jazzEventService, $jazzPassService, $userRepo, $eventRepo);
+            $paymentService = new \App\Services\PaymentService($ticketRepo, $restaurantSessionService, $jazzEventService, $danceEventService, $jazzPassService, $userRepo, $eventRepo);
 
             $controller = new $class($paymentService, $communicationService, $userService);
         } elseif ($class === 'App\Controllers\HistoryController') {
